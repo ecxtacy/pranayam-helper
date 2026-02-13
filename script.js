@@ -22,6 +22,11 @@ const exhaleAudio = document.getElementById('exhaleAudio');
 const tingAudio = document.getElementById('tingAudio');
 let currentPlayingAudio = null;
 
+// Set audio volumes
+inhaleAudio.volume = 1.0;  // Increased by 25% (capped at 1.0)
+exhaleAudio.volume = 1.0;  // Increased by 25% (capped at 1.0)
+tingAudio.volume = 0.15;    // Reduced by 60%
+
 // State
 let breathingInterval = null;
 let totalDurationInterval = null;
