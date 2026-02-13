@@ -16,16 +16,11 @@ const breathingText = document.getElementById('breathingText');
 const breathingTimer = document.getElementById('breathingTimer');
 const stopBtn = document.getElementById('stopBtn');
 
-// Audio setup
-const inhaleAudio = new Audio('inhale.mp3');
-const exhaleAudio = new Audio('exhale.mp3');
-const tingAudio = new Audio('ting.mp3');
+// Audio elements (preloaded in HTML)
+const inhaleAudio = document.getElementById('inhaleAudio');
+const exhaleAudio = document.getElementById('exhaleAudio');
+const tingAudio = document.getElementById('tingAudio');
 let currentPlayingAudio = null;
-
-// Preload audio files
-inhaleAudio.preload = 'auto';
-exhaleAudio.preload = 'auto';
-tingAudio.preload = 'auto';
 
 // State
 let breathingInterval = null;
