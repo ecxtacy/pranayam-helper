@@ -27,6 +27,26 @@ inhaleAudio.volume = 1.0;  // Increased by 25% (capped at 1.0)
 exhaleAudio.volume = 1.0;  // Increased by 25% (capped at 1.0)
 tingAudio.volume = 0.15;    // Reduced by 60%
 
+// Mobile audio unlock flag
+let audioUnlocked = false;
+
+// Unlock audio for mobile browsers (iOS Safari, etc.)
+function unlockAudio() {
+    if (audioUnlocked) return Promise.resolve();
+    
+    return Promise.all([
+        // Play and immediately pause each audio to unlock them on mobile
+        inhaleAudio.play().then(() => { inhaleAudio.pause(); inhaleAudio.currentTime = 0; }).catch(() => {}),
+        exhaleAudio.play().then(() => { exhaleAudio.pause(); exhaleAudio.currentTime = 0; }).catch(() => {}),
+        tingAudio.play().then(() => { tingAudio.pause(); tingAudio.currentTime = 0; }).catch(() => {})
+    ]).then(() => {
+        audioUnlocked = true;
+        console.log('Audio unlocked for mobile');
+    }).catch(() => {
+        console.log('Audio unlock attempted');
+    });
+}
+
 // State
 let breathingInterval = null;
 let totalDurationInterval = null;
@@ -65,7 +85,15 @@ function playStretchedAudio(audio, targetDuration) {
             if (originalDuration && originalDuration > 0) {
                 // Calculate playback rate to stretch/compress audio
                 audio.playbackRate = originalDuration / targetDuration;
-                audio.play().catch(e => console.error('Audio play error:', e));
+                
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(e => {
+                        console.error('Audio play error:', e);
+                        // Still resolve so breathing exercise continues
+                        setTimeout(resolve, targetDuration * 1000);
+                    });
+                }
                 
                 // Resolve when audio ends
                 audio.onended = () => {
@@ -90,8 +118,24 @@ function playTing() {
     return new Promise((resolve) => {
         tingAudio.currentTime = 0;
         tingAudio.playbackRate = 1.0;
-        tingAudio.play().catch(e => console.error('Ting play error:', e));
-        tingAudio.onended = resolve;
+        
+        const playPromise = tingAudio.play();
+        if (playPromise !== undefined) {
+            playPromise
+                .then(() => {
+                    tingAudio.onended = resolve;
+                })
+                .catch(e => {
+                    console.error('Ting play error:', e);
+                    // Resolve immediately if ting can't play
+                    resolve();
+                });
+        } else {
+            tingAudio.onended = resolve;
+        }
+        
+        // Failsafe: resolve after 2 seconds max
+        setTimeout(resolve, 2000);
     });
 }
 
@@ -104,7 +148,10 @@ function stopAllAudio() {
 }
 
 // Start button handler
-startBtn.addEventListener('click', () => {
+startBtn.addEventListener('click', async () => {
+    // Unlock audio on first user interaction (required for mobile)
+    await unlockAudio();
+    
     breathingConfig.breatheIn = parseInt(breatheInInput.value) || 4;
     breathingConfig.hold = parseInt(holdInput.value) || 7;
     breathingConfig.breatheOut = parseInt(breatheOutInput.value) || 8;

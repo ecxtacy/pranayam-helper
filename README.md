@@ -70,6 +70,44 @@ The audio stretching is done using the Web Audio API's playback rate adjustment,
 - **5-5-5**: Balanced breathing
 - **6-6-6**: Deep relaxation
 
+## Troubleshooting
+
+### Mobile Audio Not Working
+
+If audio doesn't play on your mobile device (especially iOS Safari):
+
+1. **Test Audio**: Open `mobile-audio-test.html` on your phone to diagnose the issue
+   - Navigate to: `https://your-github-pages-url/mobile-audio-test.html`
+   - This will test if audio files load and play correctly
+
+2. **Common Solutions**:
+   - Ensure your phone is not in Silent/Vibrate mode
+   - Check that media volume is turned up (not just ringer volume)
+   - Try using Safari on iOS (Chrome on iOS may have restrictions)
+   - On iOS: Settings → Safari → Enable "Auto-Play Media Previews"
+   - Reload the page and try again
+
+3. **Audio Unlocking**: 
+   - The app automatically "unlocks" audio when you press "Start Pranayam"
+   - This is required by mobile browsers for security
+   - The first tap should enable all audio for the session
+
+4. **File Format Issues**:
+   - Ensure audio files are in MP3 format
+   - Check that files are not corrupted
+   - Use the `audio-test.html` page to verify files load correctly
+
+5. **GitHub Pages Specific**:
+   - Wait a few minutes after pushing changes for GitHub Pages to update
+   - Clear your browser cache
+   - Try in an incognito/private browsing window
+
+### Desktop Audio Not Working
+
+- Check browser console (F12) for error messages
+- Verify audio files are in the same directory as `index.html`
+- Ensure audio files are named exactly: `inhale.mp3`, `exhale.mp3`, `ting.mp3`
+
 ## Technologies
 
 - Pure HTML, CSS, and JavaScript
