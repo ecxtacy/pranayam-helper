@@ -8,6 +8,7 @@ const holdInput = document.getElementById('hold');
 const breatheOutInput = document.getElementById('breatheOut');
 const totalDurationInput = document.getElementById('totalDuration');
 const startBtn = document.getElementById('startBtn');
+const testAudioBtn = document.getElementById('testAudioBtn');
 
 // Breathing elements
 const timeRemaining = document.getElementById('timeRemaining');
@@ -45,20 +46,34 @@ function checkAudioLoaded() {
 }
 
 // Unlock audio for mobile browsers (iOS Safari, etc.)
-function unlockAudio() {
-    if (audioUnlocked) return Promise.resolve();
+// MUST be called directly from user gesture (click/touch) - no promises!
+function unlockAudioSync() {
+    if (audioUnlocked) return;
     
-    return Promise.all([
-        // Play and immediately pause each audio to unlock them on mobile
-        inhaleAudio.play().then(() => { inhaleAudio.pause(); inhaleAudio.currentTime = 0; }).catch(() => {}),
-        holdAudio.play().then(() => { holdAudio.pause(); holdAudio.currentTime = 0; }).catch(() => {}),
-        exhaleAudio.play().then(() => { exhaleAudio.pause(); exhaleAudio.currentTime = 0; }).catch(() => {})
-    ]).then(() => {
-        audioUnlocked = true;
-        console.log('Audio unlocked for mobile');
-    }).catch(() => {
-        console.log('Audio unlock attempted');
+    console.log('Unlocking audio synchronously...');
+    
+    // Play each audio IMMEDIATELY in the user gesture
+    // This MUST happen synchronously, not in a promise callback
+    [inhaleAudio, holdAudio, exhaleAudio].forEach(audio => {
+        try {
+            audio.muted = false;
+            audio.volume = 1.0;
+            audio.load(); // Ensure audio is loaded
+            // Play and immediately pause to unlock
+            audio.play().then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+                console.log('Audio unlocked:', audio.id);
+            }).catch(err => {
+                console.warn('Audio unlock failed for', audio.id, err);
+            });
+        } catch (e) {
+            console.warn('Audio unlock exception:', e);
+        }
     });
+    
+    audioUnlocked = true;
+    console.log('Audio unlock initiated');
 }
 
 // State
@@ -85,12 +100,14 @@ function showScreen(screen) {
 function playStretchedAudio(audio, targetDuration) {
     return new Promise((resolve) => {
         // Stop any currently playing audio
-        if (currentPlayingAudio) {
+        if (currentPlayingAudio && currentPlayingAudio !== audio) {
             currentPlayingAudio.pause();
             currentPlayingAudio.currentTime = 0;
         }
         
         audio.currentTime = 0;
+        audio.muted = false;
+        audio.volume = 1.0;
         currentPlayingAudio = audio;
         
         // Wait for audio to load metadata
@@ -100,13 +117,21 @@ function playStretchedAudio(audio, targetDuration) {
                 // Calculate playback rate to stretch/compress audio
                 audio.playbackRate = originalDuration / targetDuration;
                 
+                console.log(`Playing ${audio.id} for ${targetDuration}s (rate: ${audio.playbackRate.toFixed(2)})`);
+                
                 const playPromise = audio.play();
                 if (playPromise !== undefined) {
-                    playPromise.catch(e => {
-                        console.error('Audio play error:', e);
-                        // Still resolve so breathing exercise continues
-                        setTimeout(resolve, targetDuration * 1000);
-                    });
+                    playPromise
+                        .then(() => {
+                            console.log(`${audio.id} playing successfully`);
+                        })
+                        .catch(e => {
+                            console.error('Audio play error:', audio.id, e);
+                            console.error('Audio readyState:', audio.readyState);
+                            console.error('Audio networkState:', audio.networkState);
+                            // Still resolve so breathing exercise continues
+                            resolve();
+                        });
                 }
                 
                 // Resolve when audio ends
@@ -115,8 +140,8 @@ function playStretchedAudio(audio, targetDuration) {
                     resolve();
                 };
             } else {
-                // Fallback: just wait for target duration
-                setTimeout(resolve, targetDuration * 1000);
+                // Fallback: resolve immediately if no duration
+                resolve();
             }
         };
         
@@ -137,10 +162,12 @@ function stopAllAudio() {
 }
 
 // Start button handler
-startBtn.addEventListener('click', async () => {
-    // Unlock audio on first user interaction (required for mobile)
-    await unlockAudio();
+startBtn.addEventListener('click', () => {
+    // CRITICAL: Unlock audio IMMEDIATELY in the click handler
+    // iOS requires this to happen synchronously from user gesture
+    unlockAudioSync();
     
+    // Start breathing directly - no delays to maintain audio chain
     breathingConfig.breatheIn = parseInt(breatheInInput.value) || 4;
     breathingConfig.hold = parseInt(holdInput.value) || 7;
     breathingConfig.breatheOut = parseInt(breatheOutInput.value) || 8;
@@ -149,6 +176,41 @@ startBtn.addEventListener('click', async () => {
     totalSecondsRemaining = durationMinutes * 60;
     
     startBreathing();
+});
+
+// Test audio button handler
+testAudioBtn.addEventListener('click', () => {
+    console.log('Testing audio...');
+    unlockAudioSync();
+    
+    // Play audio directly - no delays
+    inhaleAudio.volume = 1.0;
+    inhaleAudio.currentTime = 0;
+    inhaleAudio.playbackRate = 1.0;
+    
+    console.log('Playing test audio...');
+    const playPromise = inhaleAudio.play();
+    
+    if (playPromise !== undefined) {
+        playPromise
+            .then(() => {
+                console.log('✓ Audio test successful! Sound is working.');
+                testAudioBtn.textContent = '✓ Audio Working!';
+                testAudioBtn.style.backgroundColor = '#4CAF50';
+                
+                // Use audio ended event instead of timeout
+                inhaleAudio.onended = () => {
+                    testAudioBtn.textContent = 'Test Audio';
+                    testAudioBtn.style.backgroundColor = '';
+                    inhaleAudio.onended = null;
+                };
+            })
+            .catch(err => {
+                console.error('✗ Audio test failed:', err);
+                testAudioBtn.textContent = '✗ Audio Failed - Check Settings';
+                testAudioBtn.style.backgroundColor = '#f44336';
+            });
+    }
 });
 
 // Format time as MM:SS

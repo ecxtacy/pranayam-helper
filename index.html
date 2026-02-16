@@ -10,13 +10,13 @@
 </head>
 <body>
     <!-- Audio elements -->
-    <audio id="inhaleAudio" preload="auto" playsinline>
+    <audio id="inhaleAudio" preload="auto" playsinline webkit-playsinline x-webkit-airplay="allow">
         <source src="in.mp3" type="audio/mpeg">
     </audio>
-    <audio id="holdAudio" preload="auto" playsinline>
+    <audio id="holdAudio" preload="auto" playsinline webkit-playsinline x-webkit-airplay="allow">
         <source src="hold.mp3" type="audio/mpeg">
     </audio>
-    <audio id="exhaleAudio" preload="auto" playsinline>
+    <audio id="exhaleAudio" preload="auto" playsinline webkit-playsinline x-webkit-airplay="allow">
         <source src="out.mp3" type="audio/mpeg">
     </audio>
 
@@ -54,6 +54,7 @@
                 </div>
             </div>
 
+            <button id="testAudioBtn" class="secondary-btn" style="margin-bottom: 10px;">Test Audio</button>
             <button id="startBtn" class="primary-btn">Start Pranayam</button>
         </div>
 
