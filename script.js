@@ -18,17 +18,31 @@ const stopBtn = document.getElementById('stopBtn');
 
 // Audio elements (preloaded in HTML)
 const inhaleAudio = document.getElementById('inhaleAudio');
+const holdAudio = document.getElementById('holdAudio');
 const exhaleAudio = document.getElementById('exhaleAudio');
-const tingAudio = document.getElementById('tingAudio');
 let currentPlayingAudio = null;
 
 // Set audio volumes
-inhaleAudio.volume = 1.0;  // Increased by 25% (capped at 1.0)
-exhaleAudio.volume = 1.0;  // Increased by 25% (capped at 1.0)
-tingAudio.volume = 0.15;    // Reduced by 60%
+inhaleAudio.volume = 1.0;
+holdAudio.volume = 1.0;
+exhaleAudio.volume = 1.0;
 
 // Mobile audio unlock flag
 let audioUnlocked = false;
+let audioLoaded = false;
+
+// Check if all audio files are loaded
+function checkAudioLoaded() {
+    const allAudio = [inhaleAudio, holdAudio, exhaleAudio];
+    const allLoaded = allAudio.every(audio => audio.readyState >= 2);
+    
+    if (allLoaded && !audioLoaded) {
+        audioLoaded = true;
+        startBtn.disabled = false;
+        startBtn.textContent = 'Start Pranayam';
+        console.log('All audio files loaded');
+    }
+}
 
 // Unlock audio for mobile browsers (iOS Safari, etc.)
 function unlockAudio() {
@@ -37,8 +51,8 @@ function unlockAudio() {
     return Promise.all([
         // Play and immediately pause each audio to unlock them on mobile
         inhaleAudio.play().then(() => { inhaleAudio.pause(); inhaleAudio.currentTime = 0; }).catch(() => {}),
-        exhaleAudio.play().then(() => { exhaleAudio.pause(); exhaleAudio.currentTime = 0; }).catch(() => {}),
-        tingAudio.play().then(() => { tingAudio.pause(); tingAudio.currentTime = 0; }).catch(() => {})
+        holdAudio.play().then(() => { holdAudio.pause(); holdAudio.currentTime = 0; }).catch(() => {}),
+        exhaleAudio.play().then(() => { exhaleAudio.pause(); exhaleAudio.currentTime = 0; }).catch(() => {})
     ]).then(() => {
         audioUnlocked = true;
         console.log('Audio unlocked for mobile');
@@ -114,33 +128,8 @@ function playStretchedAudio(audio, targetDuration) {
     });
 }
 
-function playTing() {
-    return new Promise((resolve) => {
-        tingAudio.currentTime = 0;
-        tingAudio.playbackRate = 1.0;
-        
-        const playPromise = tingAudio.play();
-        if (playPromise !== undefined) {
-            playPromise
-                .then(() => {
-                    tingAudio.onended = resolve;
-                })
-                .catch(e => {
-                    console.error('Ting play error:', e);
-                    // Resolve immediately if ting can't play
-                    resolve();
-                });
-        } else {
-            tingAudio.onended = resolve;
-        }
-        
-        // Failsafe: resolve after 2 seconds max
-        setTimeout(resolve, 2000);
-    });
-}
-
 function stopAllAudio() {
-    [inhaleAudio, exhaleAudio, tingAudio].forEach(audio => {
+    [inhaleAudio, holdAudio, exhaleAudio].forEach(audio => {
         audio.pause();
         audio.currentTime = 0;
     });
@@ -220,11 +209,13 @@ async function startPhase(phase, duration) {
     if (phase === 'breatheIn') {
         // Play stretched inhale audio
         playStretchedAudio(inhaleAudio, duration);
+    } else if (phase === 'hold') {
+        // Play stretched hold audio
+        playStretchedAudio(holdAudio, duration);
     } else if (phase === 'breatheOut') {
         // Play stretched exhale audio
         playStretchedAudio(exhaleAudio, duration);
     }
-    // Hold phase has no audio
     
     // Start countdown
     breathingInterval = setInterval(() => {
@@ -238,10 +229,7 @@ async function startPhase(phase, duration) {
     }, 1000);
 }
 
-async function handlePhaseEnd() {
-    // Play ting at the end of current phase
-    await playTing();
-    
+function handlePhaseEnd() {
     // Move to next phase
     moveToNextPhase();
 }
@@ -283,3 +271,16 @@ document.addEventListener('touchend', (event) => {
     }
     lastTouchEnd = now;
 }, false);
+
+// Initialize: disable start button until audio loads
+startBtn.disabled = true;
+startBtn.textContent = 'Loading Audio...';
+
+// Add event listeners to check when audio is loaded
+[inhaleAudio, holdAudio, exhaleAudio].forEach(audio => {
+    audio.addEventListener('loadeddata', checkAudioLoaded);
+    audio.addEventListener('canplaythrough', checkAudioLoaded);
+});
+
+// Initial check in case audio is already loaded
+checkAudioLoaded();
