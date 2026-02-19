@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Mobile Audio Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: #667eea;
+        }
+        .test-container {
+            width: 100%;
+            max-width: 400px;
+            background: #1a1a2e;
+            border-radius: 20px;
+            padding: 2rem;
+        }
+        .instruction {
+            margin-bottom: 1.5rem;
+            color: #a0a0b8;
+            text-align: center;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        button {
+            width: 100%;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .status {
+            margin-top: 2rem;
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 500;
+        }
+        .status.success {
+            background: #43e97b33;
+            color: #43e97b;
+        }
+        .status.error {
+            background: #ff6b6b33;
+            color: #ff6b6b;
+        }
+        .status.info {
+            background: #4facfe33;
+            color: #4facfe;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <audio id="inhaleAudio" preload="auto" playsinline>
+        <source src="inhale.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="exhaleAudio" preload="auto" playsinline>
+        <source src="exhale.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="tingAudio" preload="auto" playsinline>
+        <source src="ting.mp3" type="audio/mpeg">
+    </audio>
+
+    <h1>📱 Mobile Audio Test</h1>
+    
+    <div class="test-container">
+        <div class="instruction">
+            Tap the button below to unlock and test audio on your mobile device.
+        </div>
+        
+        <button id="unlockBtn" onclick="unlockAndTest()">Unlock & Test Audio</button>
+        
+        <div id="status" class="status info hidden">
+            Initializing...
+        </div>
+    </div>
+
+    <script>
+        const inhaleAudio = document.getElementById('inhaleAudio');
+        const exhaleAudio = document.getElementById('exhaleAudio');
+        const tingAudio = document.getElementById('tingAudio');
+        const status = document.getElementById('status');
+        const unlockBtn = document.getElementById('unlockBtn');
+
+        // Set volumes
+        inhaleAudio.volume = 1.0;
+        exhaleAudio.volume = 1.0;
+        tingAudio.volume = 0.15;
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.classList.remove('hidden');
+        }
+
+        async function unlockAndTest() {
+            unlockBtn.disabled = true;
+            showStatus('Unlocking audio...', 'info');
+
+            try {
+                // Unlock each audio element
+                await Promise.all([
+                    inhaleAudio.play().then(() => { inhaleAudio.pause(); inhaleAudio.currentTime = 0; }),
+                    exhaleAudio.play().then(() => { exhaleAudio.pause(); exhaleAudio.currentTime = 0; }),
+                    tingAudio.play().then(() => { tingAudio.pause(); tingAudio.currentTime = 0; })
+                ]);
+
+                showStatus('✓ Audio unlocked! Testing ting...', 'success');
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Test ting
+                tingAudio.currentTime = 0;
+                await tingAudio.play();
+                await new Promise(resolve => {
+                    tingAudio.onended = resolve;
+                    setTimeout(resolve, 2000); // failsafe
+                });
+
+                showStatus('✓ Ting works! Testing inhale (3s)...', 'success');
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Test inhale (3 seconds)
+                inhaleAudio.currentTime = 0;
+                inhaleAudio.playbackRate = inhaleAudio.duration / 3;
+                await inhaleAudio.play();
+                await new Promise(resolve => {
+                    inhaleAudio.onended = resolve;
+                    setTimeout(resolve, 3500);
+                });
+
+                showStatus('✓ Inhale works! Testing exhale (3s)...', 'success');
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Test exhale (3 seconds)
+                exhaleAudio.currentTime = 0;
+                exhaleAudio.playbackRate = exhaleAudio.duration / 3;
+                await exhaleAudio.play();
+                await new Promise(resolve => {
+                    exhaleAudio.onended = resolve;
+                    setTimeout(resolve, 3500);
+                });
+
+                showStatus('✅ All audio tests passed! Your phone is ready for pranayam.', 'success');
+                unlockBtn.textContent = 'Test Again';
+                unlockBtn.disabled = false;
+
+            } catch (error) {
+                showStatus(`❌ Audio test failed: ${error.message}`, 'error');
+                console.error('Audio test error:', error);
+                unlockBtn.textContent = 'Try Again';
+                unlockBtn.disabled = false;
+            }
+        }
+
+        // Check if files are loaded
+        window.addEventListener('load', () => {
+            let loadedCount = 0;
+            [inhaleAudio, exhaleAudio, tingAudio].forEach(audio => {
+                audio.addEventListener('loadeddata', () => {
+                    loadedCount++;
+                    if (loadedCount === 3) {
+                        console.log('All audio files loaded');
+                    }
+                });
+                audio.addEventListener('error', (e) => {
+                    showStatus(`❌ Failed to load audio file: ${audio.src}`, 'error');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
